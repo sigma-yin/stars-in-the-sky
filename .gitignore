@@ -1,0 +1,13 @@
+build/
+install/
+log/
+backup/
+logs-1023-0004/
+match_export/
+__pycache__/
+*.pyc
+*.log
+.scratch_*
+submission/*.tar.gz
+*.webm
+*.mp4

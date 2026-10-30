@@ -1,0 +1,10 @@
+build/
+install/
+log/
+logs-1023-0004/
+backup/
+__pycache__/
+*.log
+*.pyc
+*.tar
+submission/
