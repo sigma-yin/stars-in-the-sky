@@ -9,5 +9,4 @@ __pycache__/
 *.log
 .scratch_*
 submission/*.tar.gz
-*.webm
 *.mp4
