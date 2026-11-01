@@ -8,5 +8,5 @@ __pycache__/
 *.pyc
 *.log
 .scratch_*
-submission/*.tar.gz
+**/submission/*.tar.gz
 *.mp4

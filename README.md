@@ -1,39 +1,73 @@
-# RMTC 图灵对决赛参赛程序
+# RMTC 2026 图灵对决赛 · 参赛材料仓库
 
-ROS 2 Humble 参赛节点 `rmtc_bot`：订阅本席位感知，向本席位动作话题提交动作；
+ROS 2 Humble 参赛节点 `rmtc_bot` 的代码、镜像与文档，按递交轮次分目录存放，
+每轮自带可独立还原的代码、镜像分卷、文档与校验和。
+
 随机事件只通过官方自然语言公告交给 LLM 理解，模型输出仅做几何合法性校验。
 
-## 目录结构
+## 轮次索引
+
+| 轮次 | 目录 | 镜像 | 代码 | 内容 |
+| --- | --- | --- | --- | --- |
+| 2026-10-31 递交（首轮） | [`20261031/`](20261031/) | `rmtc-team:20261029`（`068321cfe973`） | `bot_node.py` `c1a25510…`，1607 行 | 正式递交包：提交说明、检录录屏、3 卷镜像、技术报告草稿、代码逐块说明、现场操作备忘 |
+| 2026-11-01 更新 | [`20261101/`](20261101/) | `rmtc-team:20261101`（`21930139bd78`） | `bot_node.py` `a436aeda…`，1749 行 | 现场问题修补 11 条 + 1 处崩溃修复，含改动说明与 15:24 场赛况还原；**未实跑验证** |
+
+两轮互不覆盖：`20261031/` 保持首轮原样，`20261101/` 是其后所有改动的落点。
+
+## 仓库结构
 
 ```
-rmtc_ws/
-├── Dockerfile                  # 参赛镜像构建文件
-├── .dockerignore
-├── run_contestant.sh           # 启动入口（环境变量注入席位/令牌/网关）
-├── decision_config.json        # 现场唯一允许修改的参数文件
-├── src/rmtc_bot/
-│   ├── package.xml
-│   ├── setup.py
-│   └── rmtc_bot/
-│       ├── bot_node.py         # 决策：BFS 寻路、任务/资源、事件规避、交战
-│       └── ai_client.py        # 异步 LLM 网关客户端与系统提示词
-└── backup/                     # 第一阶段冻结版本（不参与镜像）
+stars-in-the-sky/
+├── README.md                       # 本文件
+├── .gitignore
+├── 20261031/                       # 首轮递交快照（镜像 tag 20261029）
+│   ├── README.md                   # 该轮说明：构建、运行、决策类型
+│   ├── Dockerfile / .dockerignore
+│   ├── run_contestant.sh           # 启动入口（席位/令牌/网关全部来自环境变量）
+│   ├── decision_config.json        # 现场唯一允许改的参数文件
+│   ├── fastdds_udp_only.xml
+│   ├── src/rmtc_bot/               # ROS 2 包
+│   ├── docs/                       # 技术报告草稿、代码逐块说明、检录清单、现场备忘、物料清单
+│   ├── submission/                 # 提交说明、两个 sha256、检录录屏
+│   └── archive/rmtc-team-image/    # 镜像 3 卷
+└── 20261101/                       # 现场修补后快照（镜像 tag 20261101）
+    ├── README.md                   # 该轮标识、改动摘要、验证状态
+    ├── Dockerfile / .dockerignore / run_contestant.sh / decision_config.json / fastdds_udp_only.xml
+    ├── src/rmtc_bot/               # 今日代码
+    ├── docs/                       # 今日改动说明、15:24 场赛况报告、技术报告语雀链接与草稿
+    ├── submission/                 # 提交说明、两个 sha256
+    └── archive/rmtc-team-image/    # 镜像 3 卷
 ```
 
-## 构建镜像
+## 镜像还原
+
+GitHub 单文件上限 100 MiB，每轮镜像按 90 MiB 分 3 卷存放：
 
 ```bash
-cd rmtc_ws
-docker build -t rmtc-team:latest .
+cd 20261101/archive/rmtc-team-image
+cat rmtc-team-image.tar.gz.part* > rmtc-team-image.tar.gz
+sha256sum rmtc-team-image.tar.gz          # 见下表
+gunzip -c rmtc-team-image.tar.gz | docker load
+docker images rmtc-team --format '{{.Repository}}:{{.Tag}} {{.ID}}'
 ```
 
-镜像内已完成 `colcon build`，无需在容器内重新编译。
+`20261031/` 同上，把路径换掉即可。两轮分卷合计约 500 MiB，克隆较慢属正常。
 
-## 运行
+## 校验和一览
 
-席位、令牌、网关、ROS 网络均按主办方现场通知通过环境变量注入：
+| 轮次 | 镜像包 `rmtc-team-image.tar.gz` | 源码包 `rmtc-team-code.tar.gz` |
+| --- | --- | --- |
+| 20261031 | `ad3dc3b87b03e97bddce8cade36f90c5dd7e73e888c521025d5490a787e2aaab`（262,517,638 字节） | `d6b048d87efb354f0edc7dedaa5d6d159f40913ba497c17bdee0efc1a921f400` |
+| 20261101 | `a57b08909696bb8c53ef284327eedfe92e8f52700855c672eec244f4298ddb73`（262,526,073 字节） | `9494a738d6e1a83eec61f71280964979610b322a8541e33a0e945d7a87a6cdec` |
+
+每轮目录下的 `submission/*.sha256` 为权威值；两个 `.tar.gz` 原件体积大，未纳入 git。
+
+## 构建与运行
 
 ```bash
+cd 20261101                      # 或 20261031
+docker build -t rmtc-team:20261101 .
+
 docker run --rm --network host \
   -e RMTC_SEAT=A \
   -e RMTC_TEAM_TOKEN="<本场席位令牌>" \
@@ -41,53 +75,30 @@ docker run --rm --network host \
   -e ROS_DOMAIN_ID=27 \
   -e ROS_LOCALHOST_ONLY=0 \
   -e RMW_IMPLEMENTATION=rmw_fastrtps_cpp \
-  rmtc-team:latest
+  rmtc-team:20261101
 ```
 
-不使用 Docker 时：
+- 席位、令牌、网关、ROS 域全部由环境变量注入，代码与镜像内不写死任何值。
+- `20261101` 起支持 `-e RMTC_AI_TIMEOUT=8`（秒，默认 8）。
+- 缺少 `RMTC_TEAM_TOKEN` 时程序以退出码 2 终止，不会空跑。
+- `decision_config.json` 每 20 Tick 重读，暂停期间切换 `collect` / `survive` 后恢复即生效。
 
-```bash
-export RMTC_SEAT=A
-export RMTC_TEAM_TOKEN="<本场席位令牌>"
-export RMTC_AI_URL="<本场统一 LLM 网关完整 completions 地址>"
-export ROS_DOMAIN_ID=27
-export ROS_LOCALHOST_ONLY=0
-export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-./run_contestant.sh
-```
+## 文档索引
 
-- `RMTC_AI_URL` 未设置时默认 `http://127.0.0.1:8080/v1/chat/completions`（本机练习代理），
-  正式比赛必须设置为主办方通知的网关地址。
-- 程序不读取任何密钥文件，不发送模型密钥；令牌仅用于本地网关注入。
-- 动作回填当前感知的 `tick` 与 `session_id`；同 Tick 重发感知时重发缓存动作。
-- 镜像内默认使用 `fastdds_udp_only.xml`：容器与宿主机 `/dev/shm` 不共享时，Fast DDS 的共享内存
-  传输会静默丢感知，改走 UDP 后可跨容器/跨机稳定收发。
+| 文档 | 位置 | 说明 |
+| --- | --- | --- |
+| 今日改动说明 | [`20261101/docs/今日改动说明_20261101.md`](20261101/docs/今日改动说明_20261101.md) | 11 条改动 + 1 处崩溃修复：前因、改法、验证口径 |
+| 15:24 场赛况报告 | [`20261101/docs/比赛报告_20261101_1524.md`](20261101/docs/比赛报告_20261101_1524.md) | AI 全 401、6 次阵亡的过程还原与下一步动作 |
+| 技术报告（语雀） | [`20261101/docs/技术报告_语雀.md`](20261101/docs/技术报告_语雀.md) | 正式版在语雀（当前私密，直连 401）；仓库内附 10-30 本地草稿，§6/§8 未同步 |
+| 技术报告本地草稿 | [`20261101/docs/技术报告_本地草稿_20261030.md`](20261101/docs/技术报告_本地草稿_20261030.md) | 离线可读，引用数字以语雀版为准 |
+| 代码逐块说明 | [`20261031/docs/比赛运行代码逐块说明.md`](20261031/docs/比赛运行代码逐块说明.md) | 逐函数讲作用与由来（对应 20261029 版本） |
+| 现场操作备忘 | [`20261031/docs/现场操作备忘.md`](20261031/docs/现场操作备忘.md) | 携带清单、开赛前 30 秒核对、故障速查 |
+| 首轮提交物料清单 | [`20261031/docs/提交物料清单.md`](20261031/docs/提交物料清单.md) | 2026-10-30 定稿的六件套核对表 |
 
-## 导出镜像文件
+## 合规边界
 
-```bash
-docker save rmtc-team:latest | gzip > rmtc-team-image.tar.gz
-```
-
-约 1.1 GB（压缩后更小）。也可直接提交 `Dockerfile` 与 `src/`，由赛方自行构建。
-
-## 决策类型
-
-`decision_config.json` 只包含 `decision_type`，现场允许在暂停期间切换：
-
-- `collect`：采集模式。完成三项任务后继续收集资源，伤害未满时在胜算足够时交战。
-- `survive`：生存模式。不做主动进攻，优先躲避敌人与危险区域。
-
-程序每 20 Tick 重新读取该文件，暂停期间修改、恢复后生效。
-
-## 日志
-
-节点日志输出到标准错误，包含每 Tick 的 `pos/hp/res/send`、AI 请求结果与状态切换。
-需要排查时在 `docker run` 上加 `2>&1 | tee bot.log`。
-
-## 备注
-
-- Stage 1（100 Tick、100 ms/Tick）与 Stage 2（500 Tick、500 ms/Tick）共用同一节点，
-  通过感知字段自动适配，无需切换参数。
-- 练习包中的本地令牌、场次 ID、地图、事件时间与任务坐标仅用于赛前联调，
-  未写入程序与镜像。
+- 随机事件只由官方 LLM 通过自然语言公告理解，不做正则、关键词匹配、固定模板或预设调度。
+- 不把结构化事件参数、全图数据、本地日志或网页信息作为决策输入。
+- 仓库与镜像内不含模型 API Key、席位令牌、场次 ID、地图或事件坐标；
+  文档中出现的现场网关地址已脱敏为 `<现场网关>`。
+- 检录录屏只出现在 `20261031/submission/`，画面不含令牌与密钥。
